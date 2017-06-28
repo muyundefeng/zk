@@ -105,14 +105,14 @@ public class QuorumCnxManager {
     /*
      * Mapping from Peer to Thread number
      */
-    final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
-    final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;
-    final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
+    final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;//发送器集合，键为对应每一台远程zookeeper服务器，负责发送消息给该台服务器。
+    final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;//创建发送队列，键为接受服务的id，值为发送的内容。
+    final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;//最近发送过的消息
 
     /*
      * Reception queue
      */
-    public final ArrayBlockingQueue<Message> recvQueue;
+    public final ArrayBlockingQueue<Message> recvQueue;//本台服务器要接受的消息，来自其他服务器的消息。
     /*
      * Object to synchronize access to recvQueue
      */
@@ -316,11 +316,12 @@ public class QuorumCnxManager {
         InetSocketAddress electionAddr = null;
 
         try {
+            //得到来自其他服务器的数据流
             DataInputStream din = new DataInputStream(sock.getInputStream());
 
             protocolVersion = din.readLong();
             if (protocolVersion >= 0) { // this is a server id and not a protocol version
-                sid = protocolVersion;
+                sid = protocolVersion;//来自其他服务的id
             } else {
                 try {
                     InitialMessage init = InitialMessage.parse(protocolVersion, din);
@@ -347,7 +348,7 @@ public class QuorumCnxManager {
             LOG.warn("Exception reading or writing challenge: {}", e.toString());
             return;
         }
-        
+        //只允许比自己大的sid链接进来
         //If wins the challenge, then close the new connection.
         if (sid < self.getId()) {
             /*
@@ -373,6 +374,7 @@ public class QuorumCnxManager {
             }
 
         } else { // Otherwise start worker threads to receive data.
+            //接受链接请求
             SendWorker sw = new SendWorker(sock, sid);
             RecvWorker rw = new RecvWorker(sock, sid, sw);
             sw.setRecv(rw);
@@ -580,7 +582,6 @@ public class QuorumCnxManager {
         if (sock == null) {
             return;
         }
-
         try {
             sock.close();
         } catch (IOException ie) {
@@ -627,7 +628,7 @@ public class QuorumCnxManager {
                     ss = new ServerSocket();
                     ss.setReuseAddress(true);
                     if (self.getQuorumListenOnAllIPs()) {
-                        int port = self.getElectionAddress().getPort();
+                        int port = self.getElectionAddress().getPort();//监听选举的端口号
                         addr = new InetSocketAddress(port);
                     } else {
                         // Resolve hostname for this server in case the
@@ -639,11 +640,11 @@ public class QuorumCnxManager {
                     setName(addr.toString());
                     ss.bind(addr);
                     while (!shutdown) {
-                        client = ss.accept();
+                        client = ss.accept();//不断接受来自其他服务器的链接请求
                         setSockOpts(client);
                         LOG.info("Received connection request "
                                 + client.getRemoteSocketAddress());
-                        receiveConnection(client);
+                        receiveConnection(client);//接受链接请求
                         numRetries = 0;
                     }
                 } catch (IOException e) {
@@ -829,7 +830,6 @@ public class QuorumCnxManager {
                                       "server " + sid);
                             break;
                         }
-
                         if(b != null){
                             lastMessageSent.put(sid, b);
                             send(b);

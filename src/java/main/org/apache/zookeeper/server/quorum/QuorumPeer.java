@@ -783,7 +783,6 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     private void loadDataBase() {
         try {
             zkDb.loadDataBase();
-
             // load the epochs
             long lastProcessedZxid = zkDb.getDataTree().lastProcessedZxid;
             long epochOfZxid = ZxidUtils.getEpochFromZxid(lastProcessedZxid);
@@ -832,7 +831,8 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     synchronized public void startLeaderElection() {
         try {
             if (getPeerState() == ServerState.LOOKING) {
-                currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
+                //myid服务id，zxid事务id，epoch当前leader的epoch
+                currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());//初始化当前选票，本台服务器的选票，刚开始时，每个服务器都要选举自己为leader，
             }
         } catch(IOException e) {
             RuntimeException re = new RuntimeException(e.getMessage());
@@ -946,7 +946,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 le = new AuthFastLeaderElection(this, true);
                 break;
             case 3:
-                qcm = new QuorumCnxManager(this);
+                qcm = new QuorumCnxManager(this);//初始化QuorumCnxManager，主要进行网络Io管理和网络通信
                 QuorumCnxManager.Listener listener = qcm.listener;
                 if(listener != null){
                     listener.start();

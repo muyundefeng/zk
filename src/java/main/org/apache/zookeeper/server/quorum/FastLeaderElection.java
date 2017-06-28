@@ -700,7 +700,7 @@ public class FastLeaderElection implements Election {
     /**
      * Check if a pair (server id, zxid) succeeds our
      * current vote.
-     *
+     *进行选票pk的核心算法，前三个参数是接受来自其他远程服务器的票据信息，后三个参数表示本地机器的当前选票
      * @param id    Server identifier
      * @param zxid  Last zxid observed by the issuer of this vote
      */
@@ -887,8 +887,8 @@ public class FastLeaderElection implements Election {
             int notTimeout = finalizeWait;
 
             synchronized(this){
-                logicalclock.incrementAndGet();
-                updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());
+                logicalclock.incrementAndGet();//选举轮次自增一
+                updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());//更新选提案(更新选举的票据)
             }
 
             LOG.info("New election. My id =  " + self.getId() +
@@ -944,11 +944,11 @@ public class FastLeaderElection implements Election {
                         }
                         // If notification > current, replace and send messages out
                         if (n.electionEpoch > logicalclock.get()) {
-                            logicalclock.set(n.electionEpoch);
+                            logicalclock.set(n.electionEpoch);//更新选举的轮次，从其他远程服务获取，如果大于本地机器的选举轮次，则直接更新本地机器的选举轮次
                             recvset.clear();
                             if(totalOrderPredicate(n.leader, n.zxid, n.peerEpoch,
                                     getInitId(), getInitLastLoggedZxid(), getPeerEpoch())) {
-                                updateProposal(n.leader, n.zxid, n.peerEpoch);
+                                updateProposal(n.leader, n.zxid, n.peerEpoch);//如果pk的结果是本地票据不作为leader，那么需要重新变更本地票据信息，然后再将该票据发送给其他服务器
                             } else {
                                 updateProposal(getInitId(),
                                         getInitLastLoggedZxid(),
@@ -974,12 +974,12 @@ public class FastLeaderElection implements Election {
                                     ", proposed zxid=0x" + Long.toHexString(n.zxid) +
                                     ", proposed election epoch=0x" + Long.toHexString(n.electionEpoch));
                         }
-
+                        //进行选票归档
                         recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));
 
                         if (termPredicate(recvset,
                                 new Vote(proposedLeader, proposedZxid,
-                                        logicalclock.get(), proposedEpoch))) {
+                                        logicalclock.get(), proposedEpoch))) {//判断是否票据过半，选举票过半则选举为leader
 
                             // Verify if there is any change in the proposed leader
                             while((n = recvqueue.poll(finalizeWait,

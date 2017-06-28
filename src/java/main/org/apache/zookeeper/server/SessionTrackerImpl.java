@@ -95,6 +95,7 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements
     {
         super("SessionTracker", listener);
         this.expirer = expirer;
+        //zookeeper中的分桶策略
         this.sessionExpiryQueue = new ExpiryQueue<SessionImpl>(tickTime);
         this.sessionsWithTimeout = sessionsWithTimeout;
         this.nextSessionId.set(initializeNextSession(serverId));
